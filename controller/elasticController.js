@@ -16,14 +16,14 @@ const vaultLogin = async (callback) => {
         .catch((err) => console.error(err.message));
 };
 
-let client;
+let client = false;
 let connSecret;
 let lease_id;
 
 const newSecret = async (callback) => {
     vaultLogin((vault_client) => {
         vault_client
-            .read("elastic/creds/elastic-1h-role")
+            .read("elastic/creds/internally-defined-role")
             .then((secret) => {
                 callback(secret);
             })
@@ -69,23 +69,18 @@ setInterval(renewal, 30 * 60 * 1000); // renewel
 setInterval(init, 23 * 60 * 60 * 1000); // recreate
 
 const query = async (sql, callback) => {
+    let data = {
+        secret: connSecret,
+        result: '',
+    };
     try {
         const result = await client.search(sql);
-        let data = {
-            secret: connSecret,
-            result: result,
-        };
-        callback(data);
+        data.result = result
     } catch (err) {
         console.error(err);
+        data.result = err
     } finally {
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (err) {
-                console.error(err);
-            }
-        }
+        callback(data);
     }
 };
 
